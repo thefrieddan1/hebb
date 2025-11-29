@@ -1,7 +1,7 @@
 import json
 import networkx as nx
 from typing import List, Dict, Any, Set
-from models import Node, Edge, GraphResponse, Operator, FilterCriteria, GraphQuery
+from .models import Node, Edge, GraphResponse, Operator, FilterCriteria, GraphQuery
 
 class GraphManager:
     def __init__(self, json_path: str):

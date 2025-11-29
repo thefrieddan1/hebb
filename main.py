@@ -1,20 +1,19 @@
 from fastapi import FastAPI, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from graph_manager import GraphManager
-from models import GraphResponse
+from app.graph_manager import GraphManager
+from app.models import GraphResponse, GraphQuery
 import os
-from models import GraphResponse, GraphQuery
 
 app = FastAPI(title="Backslash Backend Exercise API")
 
 # Initialize GraphManager
-# Assuming the JSON file is in the same directory for now, or passed via env var
-JSON_PATH = os.path.join(os.path.dirname(__file__), "train-ticket-be (1).json")
+# JSON file is in data/
+JSON_PATH = os.path.join(os.path.dirname(__file__), "data", "train-ticket-be (1).json")
 graph_manager = GraphManager(JSON_PATH)
 
 # Mount static directory
-static_dir = os.path.join(os.path.dirname(__file__), "static")
+static_dir = os.path.join(os.path.dirname(__file__), "app", "static")
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 @app.get("/")

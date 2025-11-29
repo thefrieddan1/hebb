@@ -1,7 +1,10 @@
-from graph_manager import GraphManager
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from app.graph_manager import GraphManager
 import os
 
-JSON_PATH = "train-ticket-be (1).json"
+JSON_PATH = "data/train-ticket-be (1).json"
 gm = GraphManager(JSON_PATH)
 
 print(f"Nodes: {len(gm.graph.nodes)}")
