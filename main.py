@@ -4,6 +4,7 @@ from fastapi.responses import FileResponse
 from graph_manager import GraphManager
 from models import GraphResponse
 import os
+from models import GraphResponse, GraphQuery
 
 app = FastAPI(title="Backslash Backend Exercise API")
 
@@ -20,10 +21,6 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 async def read_index():
     return FileResponse(os.path.join(static_dir, "index.html"))
 
-
-from models import GraphResponse, GraphQuery
-
-# ... imports ...
 
 @app.post("/routes/search", response_model=GraphResponse)
 async def search_routes(query: GraphQuery):
@@ -46,18 +43,6 @@ async def get_routes(
         query.end_filters.append({"field": "kind", "operator": "in", "value": ["rds", "sqs"]})
         
     if has_vulnerability:
-        # We need a way to say "path contains a node with vulnerabilities"
-        # In our generic logic, path_filters do exactly this (must pass through)
-        # But we need to filter for nodes where 'vulnerabilities' is not empty/null.
-        # Our simple operators might need an "EXISTS" or we check if list is not empty.
-        # For now, let's assume we filter for nodes where vulnerabilities list is NOT empty.
-        # A hacky way with current operators: value != [] (NEQ)
         query.path_filters.append({"field": "vulnerabilities", "operator": "neq", "value": None})
-        # Note: In JSON, empty list is [], but in Python None check might be safer if default is None.
-        # Let's check how we load data. Node model has Optional[List] = None.
-        # So NEQ None should work if it's None. If it's [], we might need NEQ [].
-        # Let's add both or improve operator logic.
-        # Actually, let's just use a custom check in GraphManager or improve Operator.
-        # For this exercise, let's assume NEQ None covers it if we ensure data is loaded as None when empty.
     
     return graph_manager.search(query)
