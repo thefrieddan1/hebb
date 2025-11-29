@@ -2,6 +2,18 @@
 
 This project implements a RESTful API to query a microservices graph.
 
+## Solution Design & Assumptions
+
+### Design Decisions
+*   **Graph Representation**: I chose to represent the "routes" as a **subgraph** (nodes and edges) rather than a list of individual paths. This avoids the combinatorial explosion of paths in highly connected graphs and provides a structure that is easier for clients to render visually.
+*   **In-Memory Processing**: Given the dataset size, `networkx` in-memory processing provides the best balance of performance and simplicity.
+*   **Robustness**: The loader handles data inconsistencies (e.g., edges pointing to undefined nodes) by creating placeholder nodes, ensuring the API remains functional even with imperfect data.
+
+### Assumptions
+*   **Filter Logic**: Multiple filters are applied as an **intersection** (AND logic). For example, selecting "Public" and "Sink" returns paths that *both* start at a public node AND end at a sink.
+*   **Vulnerability Filter**: This filter restricts the result to paths that pass through *at least one* vulnerable node.
+*   **Data Structure**: I assumed the provided JSON is the single source of truth, but the code is structured to easily swap the data source if needed.
+
 ## Setup
 
 1.  **Install dependencies:**
