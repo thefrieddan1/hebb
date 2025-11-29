@@ -1,7 +1,7 @@
 import json
 import networkx as nx
 from typing import List, Dict, Any, Set
-from models import Node, Edge, GraphResponse
+from models import Node, Edge, GraphResponse, Operator, FilterCriteria, GraphQuery
 
 class GraphManager:
     def __init__(self, json_path: str):
@@ -42,21 +42,38 @@ class GraphManager:
                 
                 self.graph.add_edge(source, target)
 
-    def get_filtered_subgraph(self, start_public: bool = False, end_sink: bool = False, has_vulnerability: bool = False) -> GraphResponse:
-        # 1. Identify Sources (S)
-        if start_public:
-            sources = {n for n, data in self.graph.nodes(data=True) if data.get('publicExposed')}
-        else:
-            sources = set(self.graph.nodes())
+    def _evaluate_filter(self, node_data: dict, criteria: FilterCriteria) -> bool:
+        val = node_data.get(criteria.field)
+        
+        if criteria.operator == Operator.EQ:
+            return val == criteria.value
+        elif criteria.operator == Operator.NEQ:
+            return val != criteria.value
+        elif criteria.operator == Operator.IN:
+            return val in criteria.value
+        elif criteria.operator == Operator.CONTAINS:
+            if isinstance(val, list):
+                return criteria.value in val
+            return False
+        return False
 
-        # 2. Identify Targets (T)
-        if end_sink:
-            # Sinks are nodes with kind 'rds' or 'sqs' (based on observation) or maybe just leaf nodes?
-            # Requirement says "Sink (rds/sql)".
-            # Let's look for 'kind' in ['rds', 'sqs']
-            targets = {n for n, data in self.graph.nodes(data=True) if data.get('kind') in ['rds', 'sqs']}
-        else:
-            targets = set(self.graph.nodes())
+    def _get_matching_nodes(self, filters: List[FilterCriteria]) -> Set[str]:
+        if not filters:
+            return set(self.graph.nodes())
+            
+        matches = set()
+        for n, data in self.graph.nodes(data=True):
+            # Check if node satisfies ALL filters (AND logic)
+            if all(self._evaluate_filter(data, f) for f in filters):
+                matches.add(n)
+        return matches
+
+    def search(self, query: GraphQuery) -> GraphResponse:
+        # 1. Identify Sources dynamically
+        sources = self._get_matching_nodes(query.start_filters)
+
+        # 2. Identify Targets dynamically
+        targets = self._get_matching_nodes(query.end_filters)
 
         # Helper to get reachable sets including the nodes themselves
         def get_descendants(nodes):
@@ -72,25 +89,22 @@ class GraphManager:
             return result
 
         # 3. Calculate Valid Nodes
-        if has_vulnerability:
-            # Paths must go through a vulnerable node
-            vulnerable_nodes = {n for n, data in self.graph.nodes(data=True) if data.get('vulnerabilities')}
+        # If there are path filters, we treat them as "must pass through at least one node satisfying these"
+        # Similar to the vulnerability logic
+        
+        valid_nodes = set()
+        
+        if query.path_filters:
+            constraint_nodes = self._get_matching_nodes(query.path_filters)
             
-            valid_nodes = set()
-            
-            # Optimization: If no vulnerable nodes, return empty
-            if not vulnerable_nodes:
+            # Optimization: If no constraint nodes, return empty
+            if not constraint_nodes:
                 return GraphResponse(nodes=[], edges=[])
 
-            # For each vulnerable node v, we need paths S -> ... -> v -> ... -> T
-            # Nodes involved = (Nodes on S->v) U (Nodes on v->T)
-            # Nodes on S->v = Descendants(S) INTERSECT Ancestors(v)
-            # Nodes on v->T = Descendants(v) INTERSECT Ancestors(T)
-            
             reachable_from_S = get_descendants(sources)
             can_reach_T = get_ancestors(targets)
             
-            for v in vulnerable_nodes:
+            for v in constraint_nodes:
                 # Check if v is reachable from S and can reach T
                 if v in reachable_from_S and v in can_reach_T:
                     # Nodes on path S -> v

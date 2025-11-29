@@ -1,5 +1,23 @@
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
+from enum import Enum
+
+class Operator(str, Enum):
+    EQ = "eq"
+    NEQ = "neq"
+    IN = "in"
+    CONTAINS = "contains"
+
+class FilterCriteria(BaseModel):
+    field: str
+    operator: Operator
+    value: Any
+    target: str = "nodes"  # "nodes" or "edges"
+
+class GraphQuery(BaseModel):
+    start_filters: List[FilterCriteria] = []
+    end_filters: List[FilterCriteria] = []
+    path_filters: List[FilterCriteria] = []
 
 class Node(BaseModel):
     name: str

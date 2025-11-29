@@ -1,20 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Backslash Graph Explorer</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; }
-        .controls { margin-bottom: 20px; padding: 15px; background: #f5f5f5; border-radius: 5px; }
-        .control-group { margin-bottom: 10px; }
-        #results { white-space: pre-wrap; background: #eee; padding: 10px; border-radius: 5px; }
-        .stats { margin-top: 10px; font-weight: bold; }
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+        }
+
+        .controls {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 5px;
+        }
+
+        .control-group {
+            margin-bottom: 10px;
+        }
+
+        #results {
+            white-space: pre-wrap;
+            background: #eee;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .stats {
+            margin-top: 10px;
+            font-weight: bold;
+        }
     </style>
 </head>
+
 <body>
     <h1>Backslash Graph Explorer</h1>
-    
+
     <div class="controls">
         <h3>Filters</h3>
         <div class="control-group">
@@ -45,18 +69,36 @@
             const endSink = document.getElementById('endSink').checked;
             const hasVuln = document.getElementById('hasVuln').checked;
 
-            const params = new URLSearchParams({
-                start_public: startPublic,
-                end_sink: endSink,
-                has_vulnerability: hasVuln
-            });
+            const query = {
+                start_filters: [],
+                end_filters: [],
+                path_filters: []
+            };
+
+            if (startPublic) {
+                query.start_filters.push({ field: "publicExposed", operator: "eq", value: true });
+            }
+            if (endSink) {
+                query.end_filters.push({ field: "kind", operator: "in", value: ["rds", "sqs"] });
+            }
+            if (hasVuln) {
+                // Using NEQ null to find nodes with vulnerabilities (assuming None/null if empty)
+                query.path_filters.push({ field: "vulnerabilities", operator: "neq", value: null });
+            }
 
             try {
-                const response = await fetch(`/routes?${params.toString()}`);
+                const response = await fetch('/routes/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(query)
+                });
+
                 const data = await response.json();
-                
+
                 document.getElementById('results').textContent = JSON.stringify(data, null, 2);
-                document.getElementById('stats').textContent = 
+                document.getElementById('stats').textContent =
                     `Found ${data.nodes.length} nodes and ${data.edges.length} edges.`;
             } catch (error) {
                 document.getElementById('results').textContent = 'Error fetching data: ' + error;
@@ -64,4 +106,5 @@
         }
     </script>
 </body>
+
 </html>

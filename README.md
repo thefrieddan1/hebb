@@ -38,15 +38,33 @@ You can use the checkboxes to toggle filters and view the resulting graph struct
 
 ## API Usage
 
-The API provides a single endpoint `/routes` to query the graph.
+## API Usage
 
-### Endpoint: `GET /routes`
+The API provides a generic search endpoint `/routes/search` to query the graph.
 
-**Query Parameters:**
+### Endpoint: `POST /routes/search`
 
-*   `start_public` (bool, default: `False`): If `true`, returns routes that start in a public service (`publicExposed: true`).
-*   `end_sink` (bool, default: `False`): If `true`, returns routes that end in a Sink service (RDS or SQS).
-*   `has_vulnerability` (bool, default: `False`): If `true`, returns routes that involve a service with a known vulnerability.
+**Request Body:**
+
+A JSON object defining filters for start nodes, end nodes, and path constraints.
+
+```json
+{
+  "start_filters": [
+    { "field": "publicExposed", "operator": "eq", "value": true }
+  ],
+  "end_filters": [
+    { "field": "kind", "operator": "in", "value": ["rds", "sqs"] }
+  ],
+  "path_filters": []
+}
+```
+
+**Operators:**
+*   `eq`: Equals
+*   `neq`: Not Equals
+*   `in`: In list
+*   `contains`: List contains value
 
 **Response:**
 

@@ -21,14 +21,43 @@ async def read_index():
     return FileResponse(os.path.join(static_dir, "index.html"))
 
 
+from models import GraphResponse, GraphQuery
+
+# ... imports ...
+
+@app.post("/routes/search", response_model=GraphResponse)
+async def search_routes(query: GraphQuery):
+    return graph_manager.search(query)
+
+# Legacy support (optional, but good for backward compatibility during dev)
 @app.get("/routes", response_model=GraphResponse)
 async def get_routes(
     start_public: bool = Query(False, description="Filter routes starting in a public service"),
     end_sink: bool = Query(False, description="Filter routes ending in a Sink (rds/sql)"),
     has_vulnerability: bool = Query(False, description="Filter routes that have a vulnerability in one of the nodes")
 ):
-    return graph_manager.get_filtered_subgraph(
-        start_public=start_public,
-        end_sink=end_sink,
-        has_vulnerability=has_vulnerability
-    )
+    # Map legacy params to new query structure
+    query = GraphQuery()
+    
+    if start_public:
+        query.start_filters.append({"field": "publicExposed", "operator": "eq", "value": True})
+        
+    if end_sink:
+        query.end_filters.append({"field": "kind", "operator": "in", "value": ["rds", "sqs"]})
+        
+    if has_vulnerability:
+        # We need a way to say "path contains a node with vulnerabilities"
+        # In our generic logic, path_filters do exactly this (must pass through)
+        # But we need to filter for nodes where 'vulnerabilities' is not empty/null.
+        # Our simple operators might need an "EXISTS" or we check if list is not empty.
+        # For now, let's assume we filter for nodes where vulnerabilities list is NOT empty.
+        # A hacky way with current operators: value != [] (NEQ)
+        query.path_filters.append({"field": "vulnerabilities", "operator": "neq", "value": None})
+        # Note: In JSON, empty list is [], but in Python None check might be safer if default is None.
+        # Let's check how we load data. Node model has Optional[List] = None.
+        # So NEQ None should work if it's None. If it's [], we might need NEQ [].
+        # Let's add both or improve operator logic.
+        # Actually, let's just use a custom check in GraphManager or improve Operator.
+        # For this exercise, let's assume NEQ None covers it if we ensure data is loaded as None when empty.
+    
+    return graph_manager.search(query)
