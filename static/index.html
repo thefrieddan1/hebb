@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backslash Graph Explorer</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .controls { margin-bottom: 20px; padding: 15px; background: #f5f5f5; border-radius: 5px; }
+        .control-group { margin-bottom: 10px; }
+        #results { white-space: pre-wrap; background: #eee; padding: 10px; border-radius: 5px; }
+        .stats { margin-top: 10px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Backslash Graph Explorer</h1>
+    
+    <div class="controls">
+        <h3>Filters</h3>
+        <div class="control-group">
+            <label>
+                <input type="checkbox" id="startPublic"> Start in Public Service
+            </label>
+        </div>
+        <div class="control-group">
+            <label>
+                <input type="checkbox" id="endSink"> End in Sink (RDS/SQL)
+            </label>
+        </div>
+        <div class="control-group">
+            <label>
+                <input type="checkbox" id="hasVuln"> Has Vulnerability
+            </label>
+        </div>
+        <button onclick="fetchRoutes()">Query Graph</button>
+    </div>
+
+    <div class="stats" id="stats"></div>
+    <h3>Results JSON:</h3>
+    <div id="results">Select filters and click Query...</div>
+
+    <script>
+        async function fetchRoutes() {
+            const startPublic = document.getElementById('startPublic').checked;
+            const endSink = document.getElementById('endSink').checked;
+            const hasVuln = document.getElementById('hasVuln').checked;
+
+            const params = new URLSearchParams({
+                start_public: startPublic,
+                end_sink: endSink,
+                has_vulnerability: hasVuln
+            });
+
+            try {
+                const response = await fetch(`/routes?${params.toString()}`);
+                const data = await response.json();
+                
+                document.getElementById('results').textContent = JSON.stringify(data, null, 2);
+                document.getElementById('stats').textContent = 
+                    `Found ${data.nodes.length} nodes and ${data.edges.length} edges.`;
+            } catch (error) {
+                document.getElementById('results').textContent = 'Error fetching data: ' + error;
+            }
+        }
+    </script>
+</body>
+</html>
