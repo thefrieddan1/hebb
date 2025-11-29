@@ -14,6 +14,16 @@ This project implements a RESTful API to query a microservices graph.
     uvicorn main:app --reload
     ```
 
+## Graph Explorer UI
+
+A simple web interface is available to explore the graph interactively.
+
+1.  Start the server (if not already running).
+2.  Open your browser and navigate to:
+    `http://127.0.0.1:8000/`
+
+You can use the checkboxes to toggle filters and view the resulting graph structure.
+
 ## API Usage
 
 The API provides a single endpoint `/routes` to query the graph.
